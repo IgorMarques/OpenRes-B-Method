@@ -1,0 +1,385 @@
+IMPLEMENTATION
+   OpenRes_i
+REFINES
+   OpenRes
+
+VALUES
+    SECTORS = 0..100;
+    PLACES = 0..100;
+    OBJECTS = 0..100;
+    RESERVERS = 0..100;
+    SLOTS = 0..23;
+    
+    capacity = 101
+    
+CONCRETE_VARIABLES
+    sectors_i, objects_i, places_i,
+    places_objects_dom, places_objects_ran, places_objects_index,
+    users_i, approvers_i,
+    objects_list_i, objects_list_index, 
+    places_list_i, places_list_index,
+    reservations_users, reservations_places, reservations_slots,
+    reservations_index,
+    reservations_list_i, reservations_list_index,
+    approved, approved_index
+  
+INVARIANT
+    sectors_i: SECTORS --> BOOL &
+    sectors = SECTORS /\ (sectors_i~)[{TRUE}] &
+    
+    objects_i: OBJECTS --> BOOL &
+    objects = OBJECTS /\ (objects_i~)[{TRUE}] &
+    
+    places_i: PLACES --> SECTORS &
+    places = dom(places_i |>> {0}) &
+    
+    users_i: RESERVERS --> SECTORS &
+    reservers = dom(users_i |>> {0}) &
+    
+    approvers_i: RESERVERS --> BOOL &
+    approvers = RESERVERS /\ (approvers_i~)[{TRUE}] &
+    
+    places_objects_dom: (0..99) --> PLACES &
+    places_objects_ran: (0..99) --> OBJECTS &
+    places_objects_index: (0..99) &
+    ! (xx) . 
+        (xx: (0..places_objects_index - 1) =>
+            (places_objects_dom(xx) |-> places_objects_ran(xx)): places_objects) &
+    card(places_objects) = places_objects_index &
+    
+    objects_list_i: (0..99) --> OBJECTS &
+    objects_list_index: (0..99) & objects_list_index <= card(objects_i~[{TRUE}]) &
+    objects_list_i[0..objects_list_index - 1] = objects_by_place & 
+    
+    places_list_i: (0..99) --> PLACES &
+    places_list_index: (0..99) & places_list_index <= places_objects_index &
+    places_list_i[0..places_list_index - 1] = places_by_object & 
+    
+    reservations_users: (0..99) --> RESERVERS &
+    reservations_places: (0..99) --> PLACES &
+    reservations_slots: (0..99) --> SLOTS &
+    reservations_index: (0..99) &
+    ! (xx) . 
+        (xx: (0..reservations_index - 1) =>
+            (reservations_users(xx) |-> (reservations_places(xx), reservations_slots(xx)): reservations)) &
+    card(reservations) = reservations_index &
+    
+    reservations_list_i: (0..99) --> (0..99) &
+    reservations_list_index: (0..99) & reservations_list_index <= reservations_index &
+    ! (xx) .
+        (xx: (0..reservations_list_index - 1) =>
+            (reservations_users(reservations_list_i(xx)) |-> (reservations_places(reservations_list_i(xx)), reservations_slots(reservations_list_i(xx))): reservations_list & card(reservations_list_i) = reservations_list_index)) &
+    
+    
+    approved: (0..99) --> (0..99) &
+    approved_index: (0..99) &
+    ! (xx) .
+        (xx: (0..approved_index - 1) =>
+            (((reservations_places(approved(xx)), reservations_slots(approved(xx))) |-> reservations_users(approved(xx))): approved_reservations & card(approved_reservations) = approved_index))
+    
+
+INITIALISATION
+    sectors_i := SECTORS * {FALSE};
+    
+    objects_i := OBJECTS * {FALSE};
+    
+    places_i := PLACES * {0};
+    
+    users_i := RESERVERS * {0};
+
+    approvers_i := RESERVERS * {FALSE};
+
+    places_objects_dom := (0..99) * {0};
+    places_objects_ran := (0..99) * {0};
+    places_objects_index := 0;
+    
+    objects_list_i := (0..99) * {0};
+    objects_list_index := 0;
+    
+    places_list_i := (0..99) * {0};
+    places_list_index := 0;
+    
+    reservations_users := (0..99) * {0};
+    reservations_places := (0..99) * {0};
+    reservations_slots := (0..99) * {0};
+    reservations_index := 0;
+    
+    reservations_list_i := (0..99) * {0};
+    reservations_list_index := 0;
+    
+    approved := (0..99) * {0};
+    approved_index := 0
+    
+
+OPERATIONS
+    rr <-- create_sector(ss)=
+    BEGIN
+        sectors_i(ss) := TRUE;
+        rr := SetorCadastrado
+    END;
+    
+    rr <-- create_object(oo)=
+    BEGIN 
+        objects_i(oo) := TRUE;
+        rr := ObjetoCadastrado
+    END;
+    
+    rr <-- create_place(pp, ss)=
+    BEGIN
+        places_i(pp) := ss;
+        rr := SalaCadastrada
+    END;
+    
+    ss <-- get_sector(pp)=
+    BEGIN
+        ss := places_i(pp)
+    END;
+    
+    rr <-- create_reserver(rs, ss)=
+    BEGIN
+        users_i(ss) := rs;
+        rr := ReservanteCadastrado
+    END;
+    
+    rr <-- promote_user(rs) =
+    BEGIN
+        approvers_i(rs) := TRUE;
+        rr := PromovidoComSucesso
+    END;
+    
+    rr <-- add_obj_to_place(oo, pp)=
+    BEGIN
+        places_objects_dom(places_objects_index) := pp;
+        places_objects_ran(places_objects_index) := oo;
+        places_objects_index := places_objects_index + 1;
+        rr := Sucesso
+    END;
+    
+    rr <-- initialize_objects_by_place(pp) =
+    BEGIN
+        objects_list_index := 0;
+        
+        VAR ii IN
+            ii := 0;
+            
+            WHILE ii < objects_list_index DO
+                VAR place, object IN
+                    place  := places_objects_dom(ii);
+                    object := places_objects_ran(ii);
+                    
+                    IF place = pp THEN
+                       objects_list_i(objects_list_index) := object;
+                       objects_list_index := objects_list_index + 1
+                    END
+                END;
+                
+                ii := ii + 1
+            INVARIANT 1=1
+            VARIANT objects_list_index - ii
+            END
+        END;
+        
+        rr := Sucesso
+    END;
+    
+    aa, rr <-- next_objects_by_place=
+    BEGIN
+        aa := objects_list_i(objects_list_index - 1);
+        objects_list_index := objects_list_index - 1
+    END;
+    
+    rr <-- initialize_places_by_object(oo) =
+    BEGIN
+        places_list_index := 0;
+        
+        VAR ii IN
+            ii := 0;
+            
+            WHILE ii < places_list_index DO
+                VAR place, object IN
+                    place  := places_objects_dom(ii);
+                    object := places_objects_ran(ii);
+                    
+                    IF object = oo THEN
+                       places_list_i(places_list_index) := object;
+                       places_list_index := places_list_index + 1
+                    END
+                END;
+                
+                ii := ii + 1
+            INVARIANT 1=1
+            VARIANT places_list_index - ii
+            END
+        END;
+        
+        rr := Sucesso
+    END;
+    
+    aa, rr <-- next_places_by_object=
+    BEGIN
+        aa := places_list_i(places_list_index - 1);
+        places_list_index := places_list_index - 1
+    END;
+    
+    rr <-- create_reservation(rs, pp, sl) =
+    BEGIN
+        reservations_users(reservations_index) := rs;
+        reservations_places(reservations_index) := pp;
+        reservations_slots(reservations_index) := sl;
+        reservations_index := reservations_index + 1
+    END;
+    
+    rr <-- initialize_reservations_by_user(uu)=
+    BEGIN
+        reservations_list_index := 0;
+        
+        VAR ii IN
+            ii := 0;
+            
+            WHILE ii < reservations_list_index DO
+                VAR user IN
+                    user := reservations_users(ii);
+                    
+                    IF user = uu THEN
+                       reservations_list_i(reservations_list_index) := ii;
+                       reservations_list_index := reservations_list_index + 1
+                    END
+                END;
+                
+                ii := ii + 1
+            INVARIANT 1=1
+            VARIANT reservations_list_index - ii
+            END
+        END;
+        
+        rr := Sucesso
+    END;
+    
+    rr <-- initialize_reservations_by_place(pp) =
+    BEGIN
+        reservations_list_index := 0;
+        
+        VAR ii IN
+            ii := 0;
+            
+            WHILE ii < reservations_list_index DO
+                VAR place IN
+                    place := reservations_places(ii);
+                    
+                    IF place = pp THEN
+                       reservations_list_i(reservations_list_index) := ii;
+                       reservations_list_index := reservations_list_index + 1
+                    END
+                END;
+                
+                ii := ii + 1
+            INVARIANT 1=1
+            VARIANT reservations_list_index - ii
+            END
+        END;
+        
+        rr := Sucesso
+    END;
+    
+    ur, pp, ss, rr <-- next_reservation(uu) =
+    BEGIN
+        VAR ii IN
+            reservations_list_index := reservations_list_index - 1;
+            ii := reservations_list_i(reservations_list_index);
+            
+            ur := reservations_users(ii);
+            pp := reservations_places(ii);
+            ss := reservations_slots(ii)
+        END
+    END;
+    
+    rr <-- approve_reservation(ur, pp, ss, uu)=
+    BEGIN
+        reservations_list_index := 0;
+        
+        VAR ii IN
+            ii := 0;
+            
+            WHILE ii < reservations_list_index DO
+                VAR user, place, slot IN
+                    user := reservations_users(ii);
+                    place := reservations_places(ii);
+                    slot := reservations_slots(ii);
+                    
+                    IF user = ur & place = pp & slot = ss THEN
+                       approved(approved_index) := ii;
+                       approved_index := approved_index + 1
+                    END
+                END;
+                
+                ii := ii + 1
+            INVARIANT 1=1
+            VARIANT reservations_list_index - ii
+            END
+        END;
+        
+        rr := ReservaAprovada
+    END;
+
+    rr <-- reject_reservation(ur, pp, ss, uu)=
+    BEGIN
+        reservations_list_index := 0;
+        
+        VAR ii, jj, kk, ll IN
+            ii := 0;
+            jj := 0;
+            kk := 0;
+            ll := 0;
+            
+            WHILE ii < reservations_list_index DO
+                VAR user, place, slot IN
+                    user := reservations_users(ii);
+                    place := reservations_places(ii);
+                    slot := reservations_slots(ii);
+                    
+                    IF user = ur & place = pp & slot = ss THEN
+                       jj := ii + 1;
+                       
+                       WHILE jj < reservations_list_index DO
+                           reservations_users(jj - 1) := reservations_users(jj);
+                           reservations_places(jj - 1) := reservations_places(jj);
+                           reservations_slots(jj - 1) := reservations_slots(jj);
+                           
+                           jj := jj + 1
+                           
+                       INVARIANT 1=1
+                       VARIANT reservations_list_index - jj
+                       END;
+                       
+                       WHILE kk < approved_index DO
+                           VAR aa IN
+                               aa := approved(kk);
+                           
+                               IF aa = ii THEN
+                                   ll := kk + 1;
+                                   
+                                   WHILE ll < approved_index DO
+                                       approved(ll - 1) := approved(jj)
+                                   INVARIANT 1=1
+                                   VARIANT approved_index - ll
+                                   END
+                                   
+                               END
+                           END;
+                           
+                           kk := kk + 1
+                       INVARIANT 1=1
+                       VARIANT approved_index - kk
+                       END
+                    END
+                END;
+                
+                ii := ii + 1
+            INVARIANT 1=1
+            VARIANT reservations_list_index - ii
+            END
+        END;
+        
+        rr := ReservaRejeitada
+    END
+END
