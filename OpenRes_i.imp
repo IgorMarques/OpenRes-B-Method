@@ -183,7 +183,7 @@ OPERATIONS
                 END;
                 
                 ii := ii + 1
-            INVARIANT 1=1
+            INVARIANT (places_objects_dom(ii) = pp) <=> (objects_list_i(objects_list_index) = places_objects_ran(ii))
             VARIANT objects_list_index - ii
             END
         END;
@@ -216,7 +216,7 @@ OPERATIONS
                 END;
                 
                 ii := ii + 1
-            INVARIANT 1=1
+            INVARIANT (places_objects_ran(ii) = oo) <=> (places_list_i(places_list_index) = places_objects_dom(ii))
             VARIANT places_list_index - ii
             END
         END;
@@ -256,7 +256,7 @@ OPERATIONS
                 END;
                 
                 ii := ii + 1
-            INVARIANT 1=1
+            INVARIANT (reservations_users(ii) = uu) <=> (reservations_list_i(reservations_list_index) = ii)
             VARIANT reservations_list_index - ii
             END
         END;
@@ -282,7 +282,7 @@ OPERATIONS
                 END;
                 
                 ii := ii + 1
-            INVARIANT 1=1
+            INVARIANT (reservations_places(ii) = pp) <=> (reservations_list_i(reservations_list_index) = ii)
             VARIANT reservations_list_index - ii
             END
         END;
@@ -367,7 +367,7 @@ OPERATIONS
                            END;
                            
                            jj := jj + 1
-                       INVARIANT ii: rejected[0..rejected_index - 1] & ii /: approved[0..approved_index - 1]
+                       INVARIANT ii /: approved[0..approved_index - 1]
                        VARIANT approved_index - jj
                        END;
                        
@@ -376,7 +376,7 @@ OPERATIONS
                 END;
                 
                 ii := ii + 1
-            INVARIANT 1=1
+            INVARIANT ii: rejected[0..rejected_index - 1]
             VARIANT reservations_list_index - ii
             END
         END;
