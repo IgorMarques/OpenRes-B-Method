@@ -5,7 +5,7 @@ EXTENDS UserSector
 
 VARIABLES
     reservations,
-    approved_reservations,
+    approved_reservations, rejected_reservations,
 
     reservations_list
 
@@ -13,12 +13,14 @@ INVARIANT
     reservations   : RESERVERS <-> (PLACES * SLOTS) &                                            
 
     approved_reservations : (places * SLOTS)  +-> reservers &    
+    rejected_reservations <: reservations &
     reservations_list <: reservations
     
 INITIALISATION
 
     reservations := {}           ||
     approved_reservations := {}  ||
+    rejected_reservations := {}  ||
     
     reservations_list := {}
     
@@ -66,9 +68,9 @@ OPERATIONS
     PRE ur: RESERVERS & pp: PLACES & ss: SLOTS 
         & (ur |-> (pp, ss)): reservations & uu: RESERVERS 
         & uu: approvers THEN
-        reservations_list := {}                                            ||
-        reservations := reservations - {ur |-> (pp, ss)}                   ||
-        approved_reservations := approved_reservations - {(pp, ss) |-> ur} ||
+        reservations_list := {}                                                  ||
+        rejected_reservations := rejected_reservations \/ {(ur |-> (pp, ss))}    ||
+        approved_reservations := approved_reservations - {(pp, ss) |-> ur}       ||
         rr := ReservaRejeitada
     END
 END

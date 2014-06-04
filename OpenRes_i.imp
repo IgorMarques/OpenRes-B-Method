@@ -21,7 +21,8 @@ CONCRETE_VARIABLES
     reservations_users, reservations_places, reservations_slots,
     reservations_index,
     reservations_list_i, reservations_list_index,
-    approved, approved_index
+    approved, approved_index,
+    rejected, rejected_index
   
 INVARIANT
     sectors_i: SECTORS --> BOOL &
@@ -48,11 +49,11 @@ INVARIANT
     card(places_objects) = places_objects_index &
     
     objects_list_i: (0..99) --> OBJECTS &
-    objects_list_index: (0..99) & objects_list_index <= card(objects_i~[{TRUE}]) &
+    objects_list_index: (0..99) &
     objects_list_i[0..objects_list_index - 1] = objects_by_place & 
     
     places_list_i: (0..99) --> PLACES &
-    places_list_index: (0..99) & places_list_index <= places_objects_index &
+    places_list_index: (0..99) &
     places_list_i[0..places_list_index - 1] = places_by_object & 
     
     reservations_users: (0..99) --> RESERVERS &
@@ -65,12 +66,17 @@ INVARIANT
     card(reservations) = reservations_index &
     
     reservations_list_i: (0..99) --> (0..99) &
-    reservations_list_index: (0..99) & reservations_list_index <= reservations_index &
+    reservations_list_index: (0..99) &
     ! (xx) .
         (xx: (0..reservations_list_index - 1) =>
-            (reservations_users(reservations_list_i(xx)) |-> (reservations_places(reservations_list_i(xx)), reservations_slots(reservations_list_i(xx))): reservations_list & card(reservations_list_i) = reservations_list_index)) &
-    
-    
+            (reservations_users(reservations_list_i(xx)) |-> (reservations_places(reservations_list_i(xx)), reservations_slots(reservations_list_i(xx))): reservations_list & card(reservations_list) = reservations_list_index)) &
+        
+    rejected: (0..99) --> (0..99) &
+    rejected_index: (0..99) &
+    ! (xx) .
+        (xx: (0..rejected_index - 1) =>
+            (reservations_users(rejected(xx)) |-> (reservations_places(rejected(xx)), reservations_slots(rejected(xx))): rejected_reservations & card(rejected_reservations) = rejected_index)) &
+   
     approved: (0..99) --> (0..99) &
     approved_index: (0..99) &
     ! (xx) .
@@ -106,6 +112,9 @@ INITIALISATION
     
     reservations_list_i := (0..99) * {0};
     reservations_list_index := 0;
+    
+    rejected := (0..99) * {0};
+    rejected_index := 0;
     
     approved := (0..99) * {0};
     approved_index := 0
@@ -313,7 +322,7 @@ OPERATIONS
                 END;
                 
                 ii := ii + 1
-            INVARIANT 1=1
+            INVARIANT ii: approved[0..approved_index - 1]
             VARIANT reservations_list_index - ii
             END
         END;
@@ -325,11 +334,10 @@ OPERATIONS
     BEGIN
         reservations_list_index := 0;
         
-        VAR ii, jj, kk, ll IN
+        VAR ii, jj, kk IN
             ii := 0;
             jj := 0;
             kk := 0;
-            ll := 0;
             
             WHILE ii < reservations_list_index DO
                 VAR user, place, slot IN
@@ -338,39 +346,32 @@ OPERATIONS
                     slot := reservations_slots(ii);
                     
                     IF user = ur & place = pp & slot = ss THEN
-                       jj := ii + 1;
                        
-                       WHILE jj < reservations_list_index DO
-                           reservations_users(jj - 1) := reservations_users(jj);
-                           reservations_places(jj - 1) := reservations_places(jj);
-                           reservations_slots(jj - 1) := reservations_slots(jj);
-                           
-                           jj := jj + 1
-                           
-                       INVARIANT 1=1
-                       VARIANT reservations_list_index - jj
-                       END;
+                       rejected(rejected_index) := ii;
+                       rejected_index := rejected_index + 1;
                        
-                       WHILE kk < approved_index DO
+                       WHILE jj < approved_index DO
                            VAR aa IN
                                aa := approved(kk);
                            
                                IF aa = ii THEN
-                                   ll := kk + 1;
+                                   kk := jj + 1;
                                    
-                                   WHILE ll < approved_index DO
-                                       approved(ll - 1) := approved(jj)
-                                   INVARIANT 1=1
-                                   VARIANT approved_index - ll
+                                   WHILE kk < approved_index DO
+                                       approved(kk - 1) := approved(kk)
+                                   INVARIANT approved(kk - 1) = approved(kk)
+                                   VARIANT approved_index - kk
                                    END
                                    
                                END
                            END;
                            
-                           kk := kk + 1
-                       INVARIANT 1=1
-                       VARIANT approved_index - kk
-                       END
+                           jj := jj + 1
+                       INVARIANT ii: rejected[0..rejected_index - 1] & ii /: approved[0..approved_index - 1]
+                       VARIANT approved_index - jj
+                       END;
+                       
+                       approved_index := approved_index - 1
                     END
                 END;
                 
